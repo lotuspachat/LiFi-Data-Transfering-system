@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiFi Torch Test</title>
+</head>
+<body style="font-family:sans-serif;text-align:center;padding-top:40px">
+  <h2>LiFi Torch Test</h2>
+  <button id="btn" style="font-size:24px;padding:20px 40px">Toggle torch</button>
+  <p id="status" style="font-size:20px">Tap the button</p>
+
+  <script>
+    let track = null;   // the rear camera's video track (the torch belongs to it)
+    let on = false;     // current torch state
+    const status = document.getElementById('status');
+
+    document.getElementById('btn').onclick = async () => {
+      try {
+        if (!track) {
+          // First tap: ask for the rear camera (Chrome shows a permission popup)
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          });
+          track = stream.getVideoTracks()[0];
+
+          // Check whether this phone lets web pages control the torch
+          const caps = track.getCapabilities();
+          if (!caps.torch) {
+            status.textContent = 'Torch NOT supported on this phone/browser';
+            return;
+          }
+        }
+        on = !on;
+        await track.applyConstraints({ advanced: [{ torch: on }] }); // switch the flash
+        status.textContent = 'Torch ' + (on ? 'ON' : 'OFF');
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;   // show what went wrong
+      }
+    };
+  </script>
+</body>
+</html>
