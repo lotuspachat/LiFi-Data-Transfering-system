@@ -13,34 +13,49 @@
 
   <script>
     const log = m => document.getElementById('log').textContent += m + '\n';
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const v = document.getElementById('v');
     let track = null, on = false;
+
+    // Fully release a camera so the next one can open
+    async function release(stream) {
+      stream.getTracks().forEach(t => t.stop());
+      v.srcObject = null;
+      await wait(500);
+    }
 
     document.getElementById('btn').onclick = async () => {
       try {
         if (!track) {
-          // 1. Ask permission once, so the phone reveals camera names
+          // 1. Ask permission once, so camera names become visible
           const first = await navigator.mediaDevices.getUserMedia({ video: true });
-          first.getTracks().forEach(t => t.stop());
+          await release(first);
 
-          // 2. List every camera on the phone
+          // 2. List every camera
           const cams = (await navigator.mediaDevices.enumerateDevices())
                          .filter(d => d.kind === 'videoinput');
           log('Cameras found: ' + cams.length);
 
-          // 3. Try each camera until one has torch control
+          // 3. Try each camera; skip any that fail to open
           for (const cam of cams) {
-            const s = await navigator.mediaDevices.getUserMedia({
-              video: { deviceId: { exact: cam.deviceId } }
-            });
+            const name = cam.label || 'camera';
+            let s;
+            try {
+              s = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: cam.deviceId } }
+              });
+            } catch (e) {
+              log(name + ': could not open (' + e.name + ')');
+              continue;                                 // move on to the next camera
+            }
             const t = s.getVideoTracks()[0];
-            const v = document.getElementById('v');
             v.srcObject = s;
             await v.play();                              // start the preview
-            await new Promise(r => setTimeout(r, 800));  // let the camera start
+            await wait(800);                             // let the camera start
             const has = !!t.getCapabilities().torch;
-            log((cam.label || 'camera') + ': torch ' + (has ? 'YES' : 'no'));
-            if (has) { track = t; break; }               // found it: keep this camera
-            t.stop();                                    // otherwise close it, try next
+            log(name + ': torch ' + (has ? 'YES' : 'no'));
+            if (has) { track = t; break; }               // keep this camera
+            await release(s);                            // close it before trying the next
           }
 
           if (!track) { log('No camera with torch control'); return; }
