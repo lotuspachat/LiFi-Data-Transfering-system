@@ -4,17 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LiFi Transmitter</title>
+  <style>
+    button, input {
+      font-family: "Segoe UI", Roboto, sans-serif; border: 1px solid #999; border-radius: 6px;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;  /* smooth animation */
+    }
+    button { background: #f5f5f5; }
+    input  { background: #fff; height: 48px; }   /* fixed height, so the box never changes size */
+    #msg:placeholder-shown { font-size: 15px !important; }   /* smaller text only while the box is empty */
+
+    /* Hover: blue border + soft glow (not on a disabled button) */
+    button:hover:not(:disabled), input:hover {
+      border-color: #1a73e8;
+      box-shadow: 0 0 6px rgba(26, 115, 232, 0.4);
+    }
+    /* Same light blue shade for buttons and both boxes */
+    button:hover:not(:disabled), input:hover { background: #e8f0fe; }
+    button:hover:not(:disabled) { cursor: pointer; }
+
+    /* While clicked / typing in a box: same look as hover */
+    input:focus {
+      outline: none;
+      background: #e8f0fe;
+      border-color: #1a73e8;
+      box-shadow: 0 0 6px rgba(26, 115, 232, 0.5);
+    }
+
+    /* Send button before the torch is connected */
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Placeholder text: small, thin, light grey */
+    input::placeholder { font-weight: 300; letter-spacing: -0.2px; color: #9aa0a6; }
+  </style>
 </head>
 <body style="font-family:sans-serif;padding:20px;max-width:500px;margin:auto">
   <h2 style="text-align:center">LiFi UART Transmitter</h2>
 
-  <button id="connect" style="width:100%;font-size:20px;padding:14px">1. Connect torch</button>
+  <button id="connect" style="width:100%;font-size:20px;padding:14px">Connect torch</button>
   <p>Message:</p>
-  <input id="msg" value="Hello LiFi!" style="width:100%;font-size:20px;padding:8px;box-sizing:border-box">
-  <p>Bit time (ms) — must match BIT_MS in the Arduino code:</p>
+  <input id="msg" placeholder="type your message here" style="width:100%;font-size:20px;padding:8px;box-sizing:border-box">
+  <p>Bit duration (ms)<br><small style="color:#666">Must be the same as BIT_MS in the receiver firmware.</small></p>
   <input id="bit" type="number" value="250" style="width:100%;font-size:20px;padding:8px;box-sizing:border-box">
   <br><br>
-  <button id="send" style="width:100%;font-size:20px;padding:14px" disabled>2. Send</button>
+  <button id="send" style="width:100%;font-size:20px;padding:14px" disabled>Send</button>
   <pre id="log" style="white-space:pre-wrap;font-size:14px"></pre>
   <video id="v" playsinline muted style="width:80px"></video>
 
@@ -55,6 +87,7 @@
 
     document.getElementById('send').onclick = async () => {
       const text = document.getElementById('msg').value;
+         if (!text) return log('Type a message first');
       const bitMs = Number(document.getElementById('bit').value);
       const btn = document.getElementById('send');
       btn.disabled = true;
